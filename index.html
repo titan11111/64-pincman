@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カービィアドベンチャー3D</title>
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #87CEEB, #98FB98);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.game-container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    max-width: 95vw;
+    max-height: 95vh;
+    position: relative;
+}
+
+.game-header {
+    background: linear-gradient(45deg, #FF69B4, #FF1493, #FFB6C1);
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+    border: none;
+    width: 100%;
+    height: 450px;
+}
+
+.controls-overlay {
+    position: absolute;
+    top: 60px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #333;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.controls-overlay .title {
+    font-weight: bold;
+    color: #FF1493;
+    margin-bottom: 3px;
+}
+
+.controls-overlay .control {
+    margin: 1px 0;
+    color: #666;
+}
+
+.game-info {
+    background: #f0f8ff;
+    padding: 15px;
+}
+
+.mobile-controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.control-btn {
+    background: linear-gradient(45deg, #FF69B4, #FF1493);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 18px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    min-width: 85px;
+    user-select: none;
+}
+
+.control-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.control-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.jump-btn, .attack-btn {
+    background: linear-gradient(45deg, #32CD32, #228B22);
+    flex-basis: 130px;
+}
+
+.game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.98);
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    z-index: 100;
+}
+
+.game-over.hidden {
+    display: none;
+}
+
+.game-over h2 {
+    color: #FF1493;
+    margin-bottom: 20px;
+    font-size: 28px;
+}
+
+.game-over p {
+    color: #333;
+    margin-bottom: 25px;
+    font-size: 18px;
+}
+
+.restart-btn {
+    background: linear-gradient(45deg, #FF69B4, #FF1493);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.restart-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .game-container {
+        max-width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .game-header {
+        font-size: 16px;
+        padding: 10px 15px;
+    }
+    
+    #gameCanvas {
+        height: 350px;
+    }
+    
+    .controls-overlay {
+        display: none;
+    }
+    
+    .control-btn {
+        padding: 15px 18px;
+        font-size: 14px;
+        min-width: 75px;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-header {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    #gameCanvas {
+        height: 280px;
+    }
+    
+    .control-btn {
+        padding: 12px 15px;
+        font-size: 12px;
+        min-width: 65px;
+    }
+    
+    .jump-btn, .attack-btn {
+        flex-basis: 110px;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="score">スコア: <span id="score">0</span></div>
+            <div class="lives">♥ <span id="lives">3</span></div>
+        </div>
+        
+        <div class="controls-overlay">
+            <div class="title">💻 PC操作</div>
+            <div class="control">← → 移動</div>
+            <div class="control">スペース ジャンプ・吐出</div>
+            <div class="control">Z 吸込み</div>
+        </div>
+        
+        <canvas id="gameCanvas" width="900" height="450"></canvas>
+        
+        <div class="game-info">
+            <div class="mobile-controls">
+                <button id="leftBtn" class="control-btn">←</button>
+                <button id="jumpBtn" class="control-btn jump-btn">ジャンプ</button>
+                <button id="rightBtn" class="control-btn">→</button>
+                <button id="attackBtn" class="control-btn attack-btn">吸込み</button>
+            </div>
+        </div>
+        
+        <div id="gameOverScreen" class="game-over hidden">
+            <h2>ゲームオーバー</h2>
+            <p>最終スコア: <span id="finalScore">0</span></p>
+            <button id="restartBtn" class="restart-btn">もう一度遊ぶ</button>
+        </div>
+    </div>
+    
+    <script>
+// ゲーム要素の取得
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
+const livesElement = document.getElementById('lives');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreElement = document.getElementById('finalScore');
+const restartBtn = document.getElementById('restartBtn');
+
+// モバイルコントロールボタン
+const leftBtn = document.getElementById('leftBtn');
+const rightBtn = document.getElementById('rightBtn');
+const jumpBtn = document.getElementById('jumpBtn');
+const attackBtn = document.getElementById('attackBtn');
+
+// ゲーム設定
+const GRAVITY = 0.6;
+const JUMP_POWER = 15;
+const MOVE_SPEED = 5;
+
+// ゲーム状態
+let gameState = {
+    score: 0,
+    lives: 3,
+    gameRunning: true,
+    cameraX: 0
+};
+
+// キー入力状態
+let keys = {
+    left: false,
+    right: false,
+    space: false,
+    z: false
+};
+
+// 3D描画ヘルパー関数
+function draw3DCircle(x, y, radius, color, shadowColor) {
+    // 影
+    ctx.fillStyle = shadowColor;
+    ctx.beginPath();
+    ctx.ellipse(x + 3, y + 3, radius, radius * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // メイン円（グラデーション）
+    const gradient = ctx.createRadialGradient(x - radius/3, y - radius/3, 0, x, y, radius);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.7, color);
+    gradient.addColorStop(1, shadowColor);
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // ハイライト
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.arc(x - radius/3, y - radius/3, radius/3, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function draw3DEllipse(x, y, width, height, color, shadowColor) {
+    // 影
+    ctx.fillStyle = shadowColor;
+    ctx.beginPath();
+    ctx.ellipse(x + 2, y + 2, width, height, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // メイン楕円
+    const gradient = ctx.createRadialGradient(x - width/3, y - height/3, 0, x, y, Math.max(width, height));
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.8, color);
+    gradient.addColorStop(1, shadowColor);
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(x, y, width, height, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // ハイライト
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x - width/4, y - height/4, width/4, height/4, 0, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// カービィクラス
+class Kirby {
+    constructor() {
+        this.x = 100;
+        this.y = 200;
+        this.width = 50;
+        this.height = 50;
+        this.velX = 0;
+        this.velY = 0;
+        this.onGround = false;
+        this.attacking = false;
+        this.attackTimer = 0;
+        this.invulnerable = false;
+        this.invulnerableTimer = 0;
+        this.hasEnemy = false;
+        this.suckPower = 0;
+        this.bounceOffset = 0;
+    }
+    
+    update() {
+        this.bounceOffset += 0.08;
+        
+        // 移動処理
+        if (keys.left) {
+            this.velX = -MOVE_SPEED;
+        } else if (keys.right) {
+            this.velX = MOVE_SPEED;
+        } else {
+            this.velX *= 0.85; // 摩擦
+        }
+        
+        // ジャンプ処理（吸い込み後でもジャンプ可能）
+        if (keys.space && this.onGround) {
+            if (this.hasEnemy) {
+                // 敵を吸い込んでいる場合は吐き出し
+                this.spitOutEnemy();
+            } else {
+                // 通常のジャンプ
+                this.velY = -JUMP_POWER;
+                this.onGround = false;
+            }
+        }
+        
+        // 攻撃処理（吸い込み）
+        if (keys.z && !this.attacking) {
+            this.attacking = true;
+            this.attackTimer = 80;
+            this.suckPower = 100;
+        }
+        
+        if (this.attacking) {
+            this.attackTimer--;
+            this.suckPower = Math.max(0, this.suckPower - 1.2);
+            if (this.attackTimer <= 0) {
+                this.attacking = false;
+                this.suckPower = 0;
+            }
+        }
+        
+        // 無敵時間処理
+        if (this.invulnerable) {
+            this.invulnerableTimer--;
+            if (this.invulnerableTimer <= 0) {
+                this.invulnerable = false;
+            }
+        }
+        
+        // 重力適用
+        this.velY += GRAVITY;
+        
+        // 位置更新
+        this.x += this.velX;
+        this.y += this.velY;
+        
+        // 地面との当たり判定（改良）
+        const groundLevel = canvas.height - this.height - 60;
+        if (this.y >= groundLevel) {
+            this.y = groundLevel;
+            this.velY = 0;
+            this.onGround = true;
+        } else {
+            this.onGround = false;
+        }
+        
+        // 画面外制限
+        if (this.x < gameState.cameraX + 10) {
+            this.x = gameState.cameraX + 10;
+        }
+        
+        // カメラ追従
+        if (this.x > gameState.cameraX + canvas.width * 0.65) {
+            gameState.cameraX = this.x - canvas.width * 0.65;
+        }
+    }
+    
+    spitOutEnemy() {
+        if (this.hasEnemy) {
+            const star = {
+                x: this.x + this.width,
+                y: this.y + this.height/2,
+                velX: 10,
+                velY: -3,
+                width: 25,
+                height: 25,
+                rotation: 0
+            };
+            
+            if (!window.stars) window.stars = [];
+            window.stars.push(star);
+            
+            this.hasEnemy = false;
+            gameState.score += 50;
+            createSparkleEffect(this.x, this.y);
+        }
+    }
+    
+    draw() {
+        const drawX = this.x - gameState.cameraX;
+        const drawY = this.y;
+        
+        // 無敵時間中の点滅効果
+        if (this.invulnerable && Math.floor(this.invulnerableTimer / 8) % 2 === 0) {
+            return;
+        }
+        
+        const bounce = Math.sin(this.bounceOffset) * 3;
+        const centerX = drawX + this.width/2;
+        const centerY = drawY + this.height/2 + bounce;
+        
+        // 地面の影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, drawY + this.height + 8, this.width/2 - 3, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // カービィの体の大きさ調整
+        const bodyRadius = this.hasEnemy ? 28 : 25;
+        const bodyColor = this.hasEnemy ? '#FF69B4' : '#FFB6C1';
+        const shadowColor = this.hasEnemy ? '#E055A0' : '#E085B3';
+        
+        // 足（3D）
+        draw3DEllipse(centerX - 15, centerY + 20, 10, 18, '#FF91A4', '#D06B85');
+        draw3DEllipse(centerX + 15, centerY + 20, 10, 18, '#FF91A4', '#D06B85');
+        
+        // 手（3D）
+        const handBounce = Math.sin(this.bounceOffset * 1.5) * 2;
+        draw3DCircle(centerX - 25, centerY + 5 + handBounce, 9, '#FF91A4', '#D06B85');
+        draw3DCircle(centerX + 25, centerY + 5 - handBounce, 9, '#FF91A4', '#D06B85');
+        
+        // メインの体（3D）
+        draw3DCircle(centerX, centerY, bodyRadius, bodyColor, shadowColor);
+        
+        // 目（3D効果付き）
+        const eyeOffset = this.velX > 2 ? 3 : this.velX < -2 ? -3 : 0;
+        
+        // 目の白い部分
+        draw3DCircle(centerX - 12 + eyeOffset, centerY - 8, 9, 'white', '#E0E0E0');
+        draw3DCircle(centerX + 12 + eyeOffset, centerY - 8, 9, 'white', '#E0E0E0');
+        
+        // 瞳
+        ctx.fillStyle = '#000080';
+        ctx.beginPath();
+        ctx.arc(centerX - 12 + eyeOffset, centerY - 8, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 12 + eyeOffset, centerY - 8, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 目のハイライト
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(centerX - 10 + eyeOffset, centerY - 10, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 14 + eyeOffset, centerY - 10, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 口の描画
+        if (this.attacking) {
+            // 吸い込み中の大きな口（3D）
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 8, 18, 12, 0, 0, Math.PI);
+            ctx.fill();
+            
+            // 口の内側のグラデーション
+            const mouthGradient = ctx.createRadialGradient(centerX, centerY + 8, 0, centerX, centerY + 8, 18);
+            mouthGradient.addColorStop(0, '#A00000');
+            mouthGradient.addColorStop(1, '#600000');
+            ctx.fillStyle = mouthGradient;
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 8, 15, 9, 0, 0, Math.PI);
+            ctx.fill();
+            
+            // 吸い込みエフェクト（3D風）
+            this.drawSuckEffect(centerX, centerY);
+            
+        } else if (this.hasEnemy) {
+            // 敵を吸い込んだ状態
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 12, 10, 8, 0, 0, Math.PI);
+            ctx.fill();
+        } else {
+            // 通常の口（3D）
+            ctx.fillStyle = '#FF1493';
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 12, 8, 5, 0, 0, Math.PI);
+            ctx.fill();
+            
+            ctx.fillStyle = '#C71585';
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 12, 6, 3, 0, 0, Math.PI);
+            ctx.fill();
+        }
+        
+        // 頬の赤み（3D効果）
+        ctx.fillStyle = 'rgba(255, 105, 180, 0.7)';
+        ctx.beginPath();
+        ctx.arc(centerX - 22, centerY + 3, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 22, centerY + 3, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(255, 182, 193, 0.5)';
+        ctx.beginPath();
+        ctx.arc(centerX - 20, centerY + 1, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 20, centerY + 1, 6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    drawSuckEffect(centerX, centerY) {
+        const time = Date.now() * 0.008;
+        
+        // 渦巻きエフェクト
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2 + time * 3;
+            const distance = 45 + this.suckPower * 0.8;
+            const x = centerX + Math.cos(angle) * distance;
+            const y = centerY + 8 + Math.sin(angle) * (distance * 0.5);
+            const targetX = centerX + Math.cos(angle) * 20;
+            const targetY = centerY + 8 + Math.sin(angle) * 12;
+            
+            const alpha = 0.6 - (distance / 120);
+            ctx.globalAlpha = Math.max(0.1, alpha);
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(targetX, targetY);
+            ctx.stroke();
+        }
+        
+        // 波紋エフェクト
+        for (let i = 1; i <= 5; i++) {
+            const radius = 25 + i * 15;
+            const waveOffset = Math.sin(time * 4 + i) * 5;
+            ctx.globalAlpha = 0.8 - (i * 0.15);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX + 35 + waveOffset, centerY + 8, radius * 0.6, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        ctx.globalAlpha = 1;
+    }
+    
+    // 当たり判定（改良版）
+    getCollisionBox() {
+        return {
+            x: this.x + 8,
+            y: this.y + 8,
+            width: this.width - 16,
+            height: this.height - 16
+        };
+    }
+    
+    takeDamage() {
+        if (!this.invulnerable) {
+            gameState.lives--;
+            this.invulnerable = true;
+            this.invulnerableTimer = 180;
+            
+            // ダメージエフェクト
+            createDamageEffect(this.x, this.y);
+            
+            if (gameState.lives <= 0) {
+                gameOver();
+            }
+        }
+    }
+}
+
+// 敵クラス（改良版・3D）
+class Enemy {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 40;
+        this.height = 40;
+        this.velX = -3;
+        this.velY = 0;
+        this.beingSucked = false;
+        this.suckSpeed = 0;
+        this.walkCycle = 0;
+        this.type = Math.random() < 0.7 ? 'waddle' : 'poppy';
+        this.bounceOffset = Math.random() * Math.PI * 2;
+    }
+    
+    update() {
+        this.bounceOffset += 0.12;
+        
+        if (this.beingSucked) {
+            const dx = kirby.x + kirby.width/2 - (this.x + this.width/2);
+            const dy = kirby.y + kirby.height/2 - (this.y + this.height/2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 8) {
+                this.suckSpeed += 0.8;
+                this.velX = (dx / distance) * this.suckSpeed;
+                this.velY = (dy / distance) * this.suckSpeed;
+            }
+        } else {
+            this.walkCycle += 0.15;
+        }
+        
+        this.x += this.velX;
+        this.y += this.velY;
+        
+        if (!this.beingSucked) {
+            this.velY += 0.4;
+        }
+        
+        // 地面との当たり判定
+        const groundLevel = canvas.height - this.height - 60;
+        if (this.y >= groundLevel) {
+            this.y = groundLevel;
+            this.velY = 0;
+        }
+    }
+    
+    draw() {
+        const drawX = this.x - gameState.cameraX;
+        const drawY = this.y;
+        
+        if (drawX > -this.width - 20 && drawX < canvas.width + 20) {
+            if (this.beingSucked) {
+                ctx.globalAlpha = 0.6;
+            }
+            
+            if (this.type === 'waddle') {
+                this.drawWaddleDee3D(drawX, drawY);
+            } else {
+                this.drawPoppyBros3D(drawX, drawY);
+            }
+            
+            ctx.globalAlpha = 1;
+        }
+    }
+    
+    drawWaddleDee3D(drawX, drawY) {
+        const bounce = Math.sin(this.bounceOffset) * 2;
+        const centerX = drawX + this.width/2;
+        const centerY = drawY + this.height/2 + bounce;
+        
+        // 影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, drawY + this.height + 8, this.width/2 - 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 足（3D）
+        const footBounce = Math.sin(this.walkCycle * 2) * 1.5;
+        draw3DEllipse(centerX - 12, centerY + 18 + footBounce, 8, 12, '#FF6347', '#CC4125');
+        draw3DEllipse(centerX + 12, centerY + 18 - footBounce, 8, 12, '#FF6347', '#CC4125');
+        
+        // 体（3D）
+        draw3DCircle(centerX, centerY, 18, '#FF8C00', '#CC6600');
+        
+        // 目（3D）
+        draw3DCircle(centerX - 8, centerY - 6, 5, 'black', '#333');
+        draw3DCircle(centerX + 8, centerY - 6, 5, 'black', '#333');
+        
+        // 目のハイライト
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(centerX - 6, centerY - 8, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 10, centerY - 8, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 口
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + 4, 3, 0, Math.PI);
+        ctx.fill();
+    }
+    
+    drawPoppyBros3D(drawX, drawY) {
+        const bounce = Math.sin(this.bounceOffset * 1.2) * 1.8;
+        const centerX = drawX + this.width/2;
+        const centerY = drawY + this.height/2 + bounce;
+        
+        // 影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, drawY + this.height + 8, this.width/2 - 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 足
+        const footBounce = Math.sin(this.walkCycle * 2.5) * 1.5;
+        draw3DEllipse(centerX - 12, centerY + 18 + footBounce, 8, 12, '#191970', '#0F0F40');
+        draw3DEllipse(centerX + 12, centerY + 18 - footBounce, 8, 12, '#191970', '#0F0F40');
+        
+        // 体
+        draw3DCircle(centerX, centerY, 18, '#4169E1', '#2E4BC7');
+        
+        // 帽子
+        draw3DCircle(centerX, centerY - 15, 15, '#8B0000', '#5A0000');
+        
+        // 帽子のつば
+        draw3DEllipse(centerX, centerY - 10, 18, 5, '#8B0000', '#5A0000');
+        
+        // 目（怒った感じ）
+        draw3DCircle(centerX - 8, centerY - 4, 6, 'white', '#E0E0E0');
+        draw3DCircle(centerX + 8, centerY - 4, 6, 'white', '#E0E0E0');
+        
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(centerX - 8, centerY - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 8, centerY - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 眉毛
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 14, centerY - 10);
+        ctx.lineTo(centerX - 4, centerY - 7);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(centerX + 4, centerY - 7);
+        ctx.lineTo(centerX + 14, centerY - 10);
+        ctx.stroke();
+        
+        // 口（怒った感じ）
+        ctx.fillStyle = 'black';
+        ctx.fillRect(centerX - 6, centerY + 4, 12, 4);
+    }
+    
+    // 改良された当たり判定
+    getCollisionBox() {
+        return {
+            x: this.x + 6,
+            y: this.y + 6,
+            width: this.width - 12,
+            height: this.height - 12
+        };
+    }
+    
+    checkCollision(kirby) {
+        const enemyBox = this.getCollisionBox();
+        const kirbyBox = kirby.getCollisionBox();
+        
+        return enemyBox.x < kirbyBox.x + kirbyBox.width &&
+               enemyBox.x + enemyBox.width > kirbyBox.x &&
+               enemyBox.y < kirbyBox.y + kirbyBox.height &&
+               enemyBox.y + enemyBox.height > kirbyBox.y;
+    }
+    
+    checkSuckRange(kirby) {
+        const dx = (this.x + this.width/2) - (kirby.x + kirby.width/2);
+        const dy = (this.y + this.height/2) - (kirby.y + kirby.height/2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance <= kirby.suckPower && dx > -20;
+    }
+}
+
+// アイテムクラス（3D改良版）
+class Item {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 30;
+        this.height = 30;
+        this.collected = false;
+        this.bobOffset = Math.random() * Math.PI * 2;
+        this.type = Math.random() < 0.6 ? 'star' : 'tomato';
+        this.rotation = 0;
+    }
+    
+    update() {
+        this.bobOffset += 0.12;
+        this.rotation += 0.08;
+    }
+    
+    draw() {
+        const drawX = this.x - gameState.cameraX;
+        const drawY = this.y + Math.sin(this.bobOffset) * 6;
+        
+        if (drawX > -this.width && drawX < canvas.width + this.width) {
+            const centerX = drawX + this.width/2;
+            const centerY = drawY + this.height/2;
+            
+            // 光るエフェクト
+            const glowIntensity = (Math.sin(this.bobOffset * 2) + 1) * 0.3 + 0.2;
+            ctx.save();
+            ctx.globalAlpha = glowIntensity;
+            ctx.fillStyle = this.type === 'star' ? '#FFD700' : '#FF6347';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, this.width/2 + 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            if (this.type === 'star') {
+                this.drawStar3D(centerX, centerY);
+            } else {
+                this.drawTomato3D(centerX, centerY);
+            }
+        }
+    }
+    
+    drawStar3D(centerX, centerY) {
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(this.rotation);
+        
+        // 影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const angle2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+            const x1 = Math.cos(angle1) * 16 + 2;
+            const y1 = Math.sin(angle1) * 16 + 2;
+            const x2 = Math.cos(angle2) * 8 + 2;
+            const y2 = Math.sin(angle2) * 8 + 2;
+            
+            if (i === 0) ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x1, y1);
+        }
+        ctx.fill();
+        
+        // メイン星（グラデーション）
+        const starGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, 16);
+        starGradient.addColorStop(0, '#FFFF00');
+        starGradient.addColorStop(0.6, '#FFD700');
+        starGradient.addColorStop(1, '#FFA500');
+        
+        ctx.fillStyle = starGradient;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            const angle2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+            const x1 = Math.cos(angle1) * 15;
+            const y1 = Math.sin(angle1) * 15;
+            const x2 = Math.cos(angle2) * 7;
+            const y2 = Math.sin(angle2) * 7;
+            
+            if (i === 0) ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x1, y1);
+        }
+        ctx.fill();
+        
+        // 外枠
+        ctx.strokeStyle = '#FF8C00';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // 中心の輝き
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(-3, -3, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    drawTomato3D(centerX, centerY) {
+        // 影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.arc(centerX + 2, centerY + 4, 14, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // メイン体（グラデーション）
+        const tomatoGradient = ctx.createRadialGradient(centerX - 5, centerY - 5, 0, centerX, centerY + 2, 14);
+        tomatoGradient.addColorStop(0, '#FF7F7F');
+        tomatoGradient.addColorStop(0.7, '#FF6347');
+        tomatoGradient.addColorStop(1, '#CD5C5C');
+        
+        ctx.fillStyle = tomatoGradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + 2, 13, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // ハイライト
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(centerX - 4, centerY - 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // ヘタ（3D）
+        draw3DCircle(centerX - 4, centerY - 10, 4, '#228B22', '#006400');
+        draw3DCircle(centerX + 4, centerY - 10, 4, '#228B22', '#006400');
+        draw3DCircle(centerX, centerY - 8, 4, '#228B22', '#006400');
+        
+        // 十字マーク
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 6, centerY + 2);
+        ctx.lineTo(centerX + 6, centerY + 2);
+        ctx.moveTo(centerX, centerY - 4);
+        ctx.lineTo(centerX, centerY + 8);
+        ctx.stroke();
+        
+        ctx.strokeStyle = '#FFB6C1';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+    
+    getCollisionBox() {
+        return {
+            x: this.x + 5,
+            y: this.y + 5,
+            width: this.width - 10,
+            height: this.height - 10
+        };
+    }
+    
+    checkCollision(kirby) {
+        if (this.collected) return false;
+        
+        const itemBox = this.getCollisionBox();
+        const kirbyBox = kirby.getCollisionBox();
+        
+        return itemBox.x < kirbyBox.x + kirbyBox.width &&
+               itemBox.x + itemBox.width > kirbyBox.x &&
+               itemBox.y < kirbyBox.y + kirbyBox.height &&
+               itemBox.y + itemBox.height > kirbyBox.y;
+    }
+}
+
+// ゲームオブジェクト
+let kirby = new Kirby();
+let enemies = [];
+let items = [];
+
+// 敵とアイテムの生成
+function spawnEnemies() {
+    if (Math.random() < 0.018) {
+        const groundLevel = canvas.height - 100;
+        enemies.push(new Enemy(gameState.cameraX + canvas.width + 60, groundLevel));
+    }
+}
+
+function spawnItems() {
+    if (Math.random() < 0.008) {
+        const groundLevel = canvas.height - 140;
+        items.push(new Item(gameState.cameraX + canvas.width + 60, groundLevel));
+    }
+}
+
+// エフェクト関数
+function createSparkleEffect(x, y) {
+    if (!window.effects) window.effects = [];
+    
+    for (let i = 0; i < 12; i++) {
+        window.effects.push({
+            x: x + Math.random() * 50 - 25,
+            y: y + Math.random() * 50 - 25,
+            velX: (Math.random() - 0.5) * 6,
+            velY: (Math.random() - 0.5) * 6 - 3,
+            life: 40,
+            maxLife: 40,
+            type: 'sparkle',
+            size: Math.random() * 3 + 2
+        });
+    }
+}
+
+function createHealEffect(x, y) {
+    if (!window.effects) window.effects = [];
+    
+    for (let i = 0; i < 8; i++) {
+        window.effects.push({
+            x: x + 25,
+            y: y + 25,
+            velX: Math.sin(i * Math.PI / 4) * 3,
+            velY: Math.cos(i * Math.PI / 4) * 3 - 2,
+            life: 50,
+            maxLife: 50,
+            type: 'heart',
+            size: Math.random() * 2 + 3
+        });
+    }
+}
+
+function createDamageEffect(x, y) {
+    if (!window.effects) window.effects = [];
+    
+    for (let i = 0; i < 10; i++) {
+        window.effects.push({
+            x: x + Math.random() * 40 - 20,
+            y: y + Math.random() * 40 - 20,
+            velX: (Math.random() - 0.5) * 8,
+            velY: (Math.random() - 0.5) * 8 - 4,
+            life: 35,
+            maxLife: 35,
+            type: 'damage',
+            size: Math.random() * 2 + 2
+        });
+    }
+}
+
+function updateEffects() {
+    if (!window.effects) return;
+    
+    window.effects.forEach((effect, index) => {
+        effect.x += effect.velX;
+        effect.y += effect.velY;
+        effect.velY += 0.15; // 重力
+        effect.life--;
+        
+        const drawX = effect.x - gameState.cameraX;
+        const drawY = effect.y;
+        const alpha = effect.life / effect.maxLife;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        
+        if (effect.type === 'sparkle') {
+            ctx.fillStyle = '#FFD700';
+            ctx.translate(drawX, drawY);
+            ctx.rotate(Date.now() * 0.01 * effect.size);
+            
+            ctx.beginPath();
+            for (let i = 0; i < 4; i++) {
+                const angle = (i * Math.PI / 2);
+                const x = Math.cos(angle) * effect.size;
+                const y = Math.sin(angle) * effect.size;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.fill();
+            
+        } else if (effect.type === 'heart') {
+            ctx.fillStyle = '#FF69B4';
+            
+            // ハート形（3D風）
+            draw3DCircle(drawX - 3, drawY - 2, effect.size, '#FF69B4', '#E055A0');
+            draw3DCircle(drawX + 3, drawY - 2, effect.size, '#FF69B4', '#E055A0');
+            
+            ctx.fillStyle = '#FF69B4';
+            ctx.beginPath();
+            ctx.moveTo(drawX - 6, drawY + 1);
+            ctx.lineTo(drawX, drawY + 8);
+            ctx.lineTo(drawX + 6, drawY + 1);
+            ctx.fill();
+            
+        } else if (effect.type === 'damage') {
+            ctx.fillStyle = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, effect.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+        
+        if (effect.life <= 0) {
+            window.effects.splice(index, 1);
+        }
+    });
+}
+
+// 星の更新（改良版）
+function updateStars() {
+    if (!window.stars) return;
+    
+    window.stars.forEach((star, starIndex) => {
+        star.x += star.velX;
+        star.y += star.velY;
+        star.velY += 0.25;
+        star.rotation += 0.15;
+        
+        const drawX = star.x - gameState.cameraX;
+        const drawY = star.y;
+        
+        if (drawX > -star.width && drawX < canvas.width + star.width) {
+            // 3D星の描画
+            ctx.save();
+            ctx.translate(drawX + star.width/2, drawY + star.height/2);
+            ctx.rotate(star.rotation);
+            
+            // 影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                const angle2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+                const x1 = Math.cos(angle1) * 12 + 2;
+                const y1 = Math.sin(angle1) * 12 + 2;
+                const x2 = Math.cos(angle2) * 6 + 2;
+                const y2 = Math.sin(angle2) * 6 + 2;
+                
+                if (i === 0) ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.lineTo(x1, y1);
+            }
+            ctx.fill();
+            
+            // メイン星
+            const starGradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, 12);
+            starGradient.addColorStop(0, '#FFFF00');
+            starGradient.addColorStop(0.7, '#FFD700');
+            starGradient.addColorStop(1, '#FF8C00');
+            
+            ctx.fillStyle = starGradient;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                const angle2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+                const x1 = Math.cos(angle1) * 11;
+                const y1 = Math.sin(angle1) * 11;
+                const x2 = Math.cos(angle2) * 5;
+                const y2 = Math.sin(angle2) * 5;
+                
+                if (i === 0) ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.lineTo(x1, y1);
+            }
+            ctx.fill();
+            
+            ctx.restore();
+            
+            // 敵との当たり判定（改良）
+            enemies.forEach((enemy, enemyIndex) => {
+                const starBox = {
+                    x: star.x,
+                    y: star.y,
+                    width: star.width,
+                    height: star.height
+                };
+                const enemyBox = enemy.getCollisionBox();
+                
+                if (starBox.x < enemyBox.x + enemyBox.width &&
+                    starBox.x + starBox.width > enemyBox.x &&
+                    starBox.y < enemyBox.y + enemyBox.height &&
+                    starBox.y + starBox.height > enemyBox.y) {
+                    
+                    enemies.splice(enemyIndex, 1);
+                    window.stars.splice(starIndex, 1);
+                    gameState.score += 250;
+                    createSparkleEffect(enemy.x, enemy.y);
+                }
+            });
+        }
+        
+        // 画面外または地面に着いたら削除
+        if (star.x > gameState.cameraX + canvas.width + 150 || 
+            star.y > canvas.height - 50) {
+            window.stars.splice(starIndex, 1);
+        }
+    });
+}
+
+// 当たり判定処理（改良版）
+function checkCollisions() {
+    enemies.forEach((enemy, enemyIndex) => {
+        if (kirby.attacking && enemy.checkSuckRange(kirby)) {
+            enemy.beingSucked = true;
+        }
+        
+        if (enemy.checkCollision(kirby)) {
+            if (enemy.beingSucked) {
+                enemies.splice(enemyIndex, 1);
+                kirby.hasEnemy = true;
+                gameState.score += 200;
+                createSparkleEffect(kirby.x, kirby.y);
+                
+                setTimeout(() => {
+                    if (kirby.hasEnemy) {
+                        gameState.score += 100;
+                    }
+                }, 1500);
+                
+            } else if (!kirby.invulnerable) {
+                kirby.takeDamage();
+            }
+        }
+    });
+    
+    items.forEach((item, itemIndex) => {
+        if (item.checkCollision(kirby)) {
+            item.collected = true;
+            items.splice(itemIndex, 1);
+            
+            if (item.type === 'tomato') {
+                if (gameState.lives < 5) {
+                    gameState.lives++;
+                }
+                gameState.score += 150;
+                createHealEffect(kirby.x, kirby.y);
+            } else {
+                gameState.score += 75;
+                createSparkleEffect(kirby.x, kirby.y);
+            }
+        }
+    });
+}
+
+// 背景描画（3D風改良）
+function drawBackground() {
+    // 3Dグラデーション背景
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGradient.addColorStop(0, '#87CEEB');
+    bgGradient.addColorStop(0.3, '#ADD8E6');
+    bgGradient.addColorStop(0.7, '#98FB98');
+    bgGradient.addColorStop(1, '#90EE90');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 遠くの山々（3D風）
+    for (let layer = 0; layer < 3; layer++) {
+        const alpha = 0.4 - layer * 0.1;
+        const speed = 0.15 + layer * 0.05;
+        
+        ctx.fillStyle = `rgba(72, 61, 139, ${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(-100, canvas.height - 120 + layer * 20);
+        
+        for (let i = 0; i < canvas.width + 200; i += 60) {
+            const height = 80 + Math.sin((i + gameState.cameraX * speed) * 0.008) * 40;
+            ctx.lineTo(i - (gameState.cameraX * speed) % 120, canvas.height - height + layer * 15);
+        }
+        
+        ctx.lineTo(canvas.width + 100, canvas.height);
+        ctx.lineTo(-100, canvas.height);
+        ctx.fill();
+    }
+    
+    // 3D雲
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    for (let i = 0; i < 10; i++) {
+        const cloudX = (i * 120 - gameState.cameraX * 0.25) % (canvas.width + 200) - 100;
+        const cloudY = 25 + Math.sin(i * 2.5) * 20 + Math.sin(Date.now() * 0.001 + i) * 4;
+        
+        // 雲の影
+        ctx.fillStyle = 'rgba(200, 200, 200, 0.3)';
+        this.drawCloud(cloudX + 3, cloudY + 3);
+        
+        // メイン雲
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        this.drawCloud(cloudX, cloudY);
+    }
+    
+    // 地面（3Dグラデーション）
+    const groundGradient = ctx.createLinearGradient(0, canvas.height - 60, 0, canvas.height);
+    groundGradient.addColorStop(0, '#32CD32');
+    groundGradient.addColorStop(0.3, '#228B22');
+    groundGradient.addColorStop(1, '#006400');
+    ctx.fillStyle = groundGradient;
+    ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+    
+    // 3D草と花
+    for (let i = 0; i < canvas.width; i += 6) {
+        const grassX = i - (gameState.cameraX % 6);
+        
+        if (Math.random() < 0.3) {
+            // 3D草
+            const grassHeight = 6 + Math.sin((grassX + gameState.cameraX) * 0.1) * 4;
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.moveTo(grassX, canvas.height - 60);
+            ctx.quadraticCurveTo(grassX + 2, canvas.height - 60 - grassHeight, grassX + 1, canvas.height - 60 - grassHeight - 3);
+            ctx.quadraticCurveTo(grassX - 1, canvas.height - 60 - grassHeight, grassX, canvas.height - 60);
+            ctx.fill();
+        }
+        
+        if (Math.random() < 0.03) {
+            // 3D花
+            const flowerX = grassX + 3;
+            const flowerY = canvas.height - 68;
+            
+            // 花の影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.arc(flowerX + 1, flowerY + 1, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 花びら
+            draw3DCircle(flowerX, flowerY, 4, '#FFB6C1', '#FF69B4');
+            
+            // 花の中心
+            draw3DCircle(flowerX, flowerY, 2, '#FF69B4', '#C71585');
+        }
+    }
+    
+    // キラキラエフェクト（3D）
+    const time = Date.now() * 0.002;
+    for (let i = 0; i < 15; i++) {
+        const sparkleX = (i * 80 + Math.sin(time + i) * 60 - gameState.cameraX * 0.08) % (canvas.width + 160);
+        const sparkleY = 40 + Math.sin(time * 1.5 + i) * 35;
+        const sparkleSize = 2 + Math.sin(time * 2 + i) * 1.5;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.7 + Math.sin(time * 3 + i) * 0.3;
+        ctx.translate(sparkleX, sparkleY);
+        ctx.rotate(time * 2 + i);
+        
+        // 星形キラキラ（3D風）
+        const sparkleGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, sparkleSize);
+        sparkleGradient.addColorStop(0, '#FFFFFF');
+        sparkleGradient.addColorStop(0.7, '#FFD700');
+        sparkleGradient.addColorStop(1, '#FFA500');
+        
+        ctx.fillStyle = sparkleGradient;
+        ctx.beginPath();
+        for (let j = 0; j < 4; j++) {
+            const angle = (j * Math.PI / 2);
+            const x = Math.cos(angle) * sparkleSize;
+            const y = Math.sin(angle) * sparkleSize;
+            if (j === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+// 雲描画ヘルパー
+drawCloud = function(x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.arc(x + 18, y, 25, 0, Math.PI * 2);
+    ctx.arc(x + 40, y, 18, 0, Math.PI * 2);
+    ctx.arc(x + 28, y - 12, 22, 0, Math.PI * 2);
+    ctx.arc(x + 12, y - 10, 15, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// UI更新
+function updateUI() {
+    scoreElement.textContent = gameState.score.toLocaleString();
+    livesElement.textContent = gameState.lives;
+}
+
+// ゲームオーバー
+function gameOver() {
+    gameState.gameRunning = false;
+    finalScoreElement.textContent = gameState.score.toLocaleString();
+    gameOverScreen.classList.remove('hidden');
+}
+
+// ゲームリスタート
+function restartGame() {
+    gameState = {
+        score: 0,
+        lives: 3,
+        gameRunning: true,
+        cameraX: 0
+    };
+    
+    kirby = new Kirby();
+    enemies = [];
+    items = [];
+    window.effects = [];
+    window.stars = [];
+    
+    gameOverScreen.classList.add('hidden');
+    gameLoop();
+}
+
+// メインゲームループ
+function gameLoop() {
+    if (!gameState.gameRunning) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    drawBackground();
+    
+    kirby.update();
+    enemies.forEach(enemy => enemy.update());
+    items.forEach(item => item.update());
+    updateStars();
+    updateEffects();
+    
+    spawnEnemies();
+    spawnItems();
+    
+    checkCollisions();
+    
+    kirby.draw();
+    enemies.forEach(enemy => enemy.draw());
+    items.forEach(item => item.draw());
+    
+    // 画面外オブジェクト削除
+    enemies = enemies.filter(enemy => enemy.x > gameState.cameraX - 150);
+    items = items.filter(item => item.x > gameState.cameraX - 150);
+    
+    updateUI();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+// キーボードイベント
+document.addEventListener('keydown', (e) => {
+    switch(e.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+            keys.left = true;
+            e.preventDefault();
+            break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+            keys.right = true;
+            e.preventDefault();
+            break;
+        case ' ':
+            keys.space = true;
+            e.preventDefault();
+            break;
+        case 'z':
+        case 'Z':
+            keys.z = true;
+            e.preventDefault();
+            break;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    switch(e.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+            keys.left = false;
+            break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+            keys.right = false;
+            break;
+        case ' ':
+            keys.space = false;
+            break;
+        case 'z':
+        case 'Z':
+            keys.z = false;
+            break;
+    }
+});
+
+// モバイルコントロール（改良版）
+function addTouchEvents(btn, key) {
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        keys[key] = true;
+        btn.style.transform = 'translateY(-1px)';
+    });
+    
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+        btn.style.transform = 'translateY(-3px)';
+    });
+    
+    btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        keys[key] = true;
+        btn.style.transform = 'translateY(-1px)';
+    });
+    
+    btn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+        btn.style.transform = 'translateY(-3px)';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+        keys[key] = false;
+        btn.style.transform = 'translateY(-3px)';
+    });
+}
+
+addTouchEvents(leftBtn, 'left');
+addTouchEvents(rightBtn, 'right');
+addTouchEvents(jumpBtn, 'space');
+addTouchEvents(attackBtn, 'z');
+
+// リスタートボタン
+restartBtn.addEventListener('click', restartGame);
+restartBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    restartGame();
+});
+
+// ゲーム開始
+gameLoop();
+    </script>
+</body>
+</html>
